@@ -15,6 +15,14 @@ namespace DunGemCrawler
             PlaceGems(data, config, pool, boardOrigin);
         }
 
+        // Doors are only valid on the three non-entry edges: bottom, left, and right.
+        // The top row is the player's entry row, so doors are excluded there.
+        private bool IsValidDoorCell(int col, int row, int cols, int rows)
+        {
+            if (row == rows - 1) return false;           // top row = player entry, no exit here
+            return row == 0 || col == 0 || col == cols - 1;
+        }
+
         private void PlaceDungeonTiles(BoardData data, BoardConfig config,
             DungeonTileView tileViewPrefab, Transform parent, Vector2 origin)
         {
@@ -26,6 +34,11 @@ namespace DunGemCrawler
                 for (int row = 0; row < config.Rows; row++)
                 {
                     TileType type = RollTileType(config, totalWeight);
+
+                    // Doors are restricted to edge walls; demote to Floor elsewhere
+                    if (type == TileType.Door && !IsValidDoorCell(col, row, config.Columns, config.Rows))
+                        type = TileType.Floor;
+
                     var tileData = new DungeonTileData(type, col, row);
 
                     Vector2 worldPos = GridUtils.GridToWorld(col, row, origin, config.CellSize);
@@ -52,15 +65,15 @@ namespace DunGemCrawler
             return TileType.Enemy;
         }
 
-        // Guarantee at least one door exists in the bottom two rows so the player
-        // always has a reachable exit to work toward.
+        // Guarantee at least one door exists on the valid door edges.
         private void EnsureDoorAtBottom(BoardData data, BoardConfig config)
         {
-            for (int row = 0; row <= 1; row++)
-                for (int col = 0; col < config.Columns; col++)
-                    if (data.GetTile(col, row)?.Type == TileType.Door) return;
+            for (int col = 0; col < config.Columns; col++)
+                for (int row = 0; row < config.Rows; row++)
+                    if (IsValidDoorCell(col, row, config.Columns, config.Rows)
+                        && data.GetTile(col, row)?.Type == TileType.Door) return;
 
-            // No door found — overwrite a random bottom-row cell
+            // No door found anywhere on the edges — place one at a random bottom-row cell
             int doorCol = Random.Range(0, config.Columns);
             DungeonTileData tile = data.GetTile(doorCol, 0);
             tile.Type = TileType.Door;

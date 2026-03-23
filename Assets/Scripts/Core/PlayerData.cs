@@ -6,6 +6,7 @@ namespace DunGemCrawler
     {
         public Vector2Int Cell;
         public int Health = 10;
+        public int MaxHealth = 10;
 
         public PlayerData(Vector2Int startCell)
         {

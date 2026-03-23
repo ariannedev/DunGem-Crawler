@@ -28,9 +28,9 @@ namespace DunGemCrawler
             // column slides diagonally down into the gap, mimicking gravity flowing around
             // the player obstacle.
             var donorCols = new HashSet<int>();
-            FillBelowObstacleLaterally(data, data.PlayerCell, moves, donorCols);
+            FillBelowObstacleLaterally(data, data.PlayerCell, moves, donorCols, blockedCell);
             if (blockedCell.HasValue)
-                FillBelowObstacleLaterally(data, blockedCell.Value, moves, donorCols);
+                FillBelowObstacleLaterally(data, blockedCell.Value, moves, donorCols, blockedCell);
 
             // Phase 1b — re-compact donor columns: stealing a gem from the middle of a
             // column leaves a gap there; shift all gems above it downward so the gap
@@ -88,7 +88,7 @@ namespace DunGemCrawler
         // Cells below an obstacle can't receive gems falling from above, so we slide
         // a gem in from the left or right neighbour instead.
         private void FillBelowObstacleLaterally(BoardData data, Vector2Int obstacle,
-            List<GemFallMove> moves, HashSet<int> donorCols)
+            List<GemFallMove> moves, HashSet<int> donorCols, Vector2Int? blockedCell)
         {
             int col = obstacle.x;
             int obstacleRow = obstacle.y;
@@ -96,30 +96,37 @@ namespace DunGemCrawler
             for (int r = obstacleRow - 1; r >= 0; r--)
             {
                 if (data.IsPlayerCell(col, r)) continue; // never fill the player's current cell
+                if (blockedCell.HasValue && blockedCell.Value.x == col
+                    && blockedCell.Value.y == r) continue; // never fill the player's destination
                 if (data.GetGem(col, r) != null) continue; // already occupied
 
                 // Try left neighbour first, then right.
-                // Take from the row ABOVE (r+1) so the gem falls diagonally downward,
-                // mimicking gravity flowing around the obstacle.
+                // Search upward from r+1 so the gem falls diagonally downward.
+                // We scan past r+1 in case Phase 1 already compacted that row away
+                // (e.g. a horizontal match cleared gems in both this column and the
+                // adjacent column at the same row, so the r+1 slot is now empty).
                 bool filled = false;
                 foreach (int adjCol in new[] { col - 1, col + 1 })
                 {
-                    int donorRow = r + 1;
-                    if (!data.InBounds(adjCol, donorRow)) continue;
-                    if (data.IsPlayerCell(adjCol, donorRow)) continue;
-                    GemData gem = data.GetGem(adjCol, donorRow);
-                    if (gem == null) continue;
-
-                    data.SetGem(col, r, gem);
-                    data.SetGem(adjCol, donorRow, null);
-                    moves.Add(new GemFallMove
+                    for (int donorRow = r + 1; donorRow < data.Rows; donorRow++)
                     {
-                        Col = col, ToRow = r, FromRow = donorRow,
-                        IsLateral = true, FromCol = adjCol
-                    });
-                    donorCols.Add(adjCol);
-                    filled = true;
-                    break;
+                        if (!data.InBounds(adjCol, donorRow)) break;
+                        if (data.IsPlayerCell(adjCol, donorRow)) break; // don't cross the player
+                        GemData gem = data.GetGem(adjCol, donorRow);
+                        if (gem == null) continue;
+
+                        data.SetGem(col, r, gem);
+                        data.SetGem(adjCol, donorRow, null);
+                        moves.Add(new GemFallMove
+                        {
+                            Col = col, ToRow = r, FromRow = donorRow,
+                            IsLateral = true, FromCol = adjCol
+                        });
+                        donorCols.Add(adjCol);
+                        filled = true;
+                        break;
+                    }
+                    if (filled) break;
                 }
 
                 // If no neighbour had a gem the cell stays empty;

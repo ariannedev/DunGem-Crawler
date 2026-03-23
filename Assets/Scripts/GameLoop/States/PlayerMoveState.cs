@@ -32,7 +32,10 @@ namespace DunGemCrawler
             // Check tile at destination
             TileType tile = Board.Dungeon.GetType(target.x, target.y);
             if (tile == TileType.Door)
-                Debug.Log($"[DunGemCrawler] Player reached a Door at {target} — Room exit!");
+            {
+                FSM.Enter<RoomExitState>();
+                yield break;
+            }
 
             // Run gravity to fill the cell the player vacated
             FSM.Enter<GravityState>();

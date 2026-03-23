@@ -340,6 +340,53 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &682378545
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 682378547}
+  - component: {fileID: 682378546}
+  m_Layer: 0
+  m_Name: GameUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &682378546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 682378545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c1b650bd114146378d4f7b67bcd7afd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DunGemCrawler.GameUI
+  Health: 10
+  MaxHealth: 10
+  Floor: 1
+--- !u!4 &682378547
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 682378545}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.08428, y: -0.37339, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &905522445
 GameObject:
   m_ObjectHideFlags: 0
@@ -402,6 +449,7 @@ MonoBehaviour:
   playerViewPrefab: {fileID: 4153055500313808533, guid: 7875070afdc20401aae7d32192a3e293, type: 3}
   gemPool: {fileID: 905522447}
   inputHandler: {fileID: 905522446}
+  gameUI: {fileID: 682378546}
   PendingSwapA: {x: 0, y: 0}
   PendingSwapB: {x: 0, y: 0}
   PendingRemovals: []
@@ -430,3 +478,4 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 905522449}
+  - {fileID: 682378547}

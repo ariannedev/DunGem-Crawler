@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DunGemCrawler
 {
@@ -15,6 +16,7 @@ namespace DunGemCrawler
         [Header("References")]
         [SerializeField] private GemPool gemPool;
         [SerializeField] private InputHandler inputHandler;
+        [SerializeField] private GameUI gameUI;
 
         // Public for states
         public BoardData Data { get; private set; }
@@ -26,6 +28,11 @@ namespace DunGemCrawler
         public GravityResolver Gravity { get; private set; }
         public DungeonLayer Dungeon { get; private set; }
         public PlayerController Player { get; private set; }
+
+        // Exposed for RoomExitState
+        public Transform TileParent { get; private set; }
+        public DungeonTileView DungeonTilePrefab => dungeonTileViewPrefab;
+        public int FloorNumber { get; set; } = 1;
 
         // State machine blackboard
         public Vector2Int PendingSwapA;
@@ -51,15 +58,17 @@ namespace DunGemCrawler
             Vector2 playerStartWorld = GridToWorld(playerData.Cell);
             var playerViewGO = Instantiate(playerViewPrefab, playerStartWorld, Quaternion.identity);
             Player = new PlayerController(playerData, playerViewGO);
+            Player.OnDeath += HandlePlayerDeath;
 
             Detector = new MatchDetector();
             Gravity = new GravityResolver();
             Dungeon = new DungeonLayer(Data, config.FlashDuration, this);
+            Dungeon.OnTileRevealed += HandleTileRevealed;
 
+            TileParent = new GameObject("DungeonTiles").transform;
             var initializer = new BoardInitializer();
-            Transform tileParent = new GameObject("DungeonTiles").transform;
             initializer.Initialize(Data, config, gemPool, dungeonTileViewPrefab,
-                tileParent, BoardOrigin, playerData);
+                TileParent, BoardOrigin, playerData);
 
             inputHandler.Initialize(this);
 
@@ -71,16 +80,45 @@ namespace DunGemCrawler
             _fsm.Register(new GravityState());
             _fsm.Register(new CascadeCheckState());
             _fsm.Register(new PlayerMoveState());
+            _fsm.Register(new RoomExitState());
         }
 
         private void Start()
         {
+            RefreshUI();
             _fsm.Enter<IdleState>();
         }
 
         private void Update()
         {
             _fsm.Tick();
+        }
+
+        private void HandleTileRevealed(TileType type, int col, int row)
+        {
+            if (type == TileType.Enemy)
+            {
+                Player.TakeDamage(1);
+                RefreshUI();
+            }
+            else if (type == TileType.Treasure)
+            {
+                Player.Heal(2);
+                RefreshUI();
+            }
+        }
+
+        private void HandlePlayerDeath()
+        {
+            Debug.Log("[DunGemCrawler] Game Over — reloading scene");
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        public void RefreshUI()
+        {
+            if (gameUI == null) return;
+            gameUI.UpdateHealth(Player.Data.Health, Player.Data.MaxHealth);
+            gameUI.UpdateFloor(FloorNumber);
         }
 
         public Vector2 GridToWorld(int col, int row) =>
