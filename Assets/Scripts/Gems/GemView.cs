@@ -6,25 +6,34 @@ namespace DunGemCrawler
     public class GemView : MonoBehaviour
     {
         private SpriteRenderer _sr;
-        private Color _baseColor;
+        private Animator _animator;
         public GemData Data { get; private set; }
 
         private void Awake()
         {
-            _sr = GetComponent<SpriteRenderer>();
+            _sr       = GetComponent<SpriteRenderer>();
+            _animator = GetComponent<Animator>();
         }
 
-        public void Initialize(GemData data, Sprite sprite, Color color)
+        public void Initialize(GemData data, RuntimeAnimatorController controller)
         {
             Data = data;
-            _baseColor = color;
-            _sr.sprite = sprite;
-            _sr.color = color;
+            _sr.color = Color.white;
+            _animator.runtimeAnimatorController = controller;
+            PlayIdle();
         }
+
+        // ── Animation triggers ────────────────────────────────────────────────────
+
+        public void PlayIdle()    => _animator.SetTrigger("Idle");
+        public void PlayExplode() => _animator.SetTrigger("Explode");
+        public void PlayMove()    => _animator.SetTrigger("Move");
+
+        // ── Highlight ─────────────────────────────────────────────────────────────
 
         public void SetHighlight(bool on)
         {
-            _sr.color = on ? Color.Lerp(_baseColor, Color.white, 0.45f) : _baseColor;
+            _sr.color = on ? new Color(1f, 1f, 0.55f, 1f) : Color.white;
         }
 
         // ── Special gem overlay ───────────────────────────────────────────────────
@@ -113,7 +122,6 @@ namespace DunGemCrawler
                     float dx = x + 0.5f - c, dy = y + 0.5f - c;
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
                     float angle = Mathf.Atan2(dy, dx);
-                    // Star: sample at this angle between inner/outer radius
                     float sectorAngle = (2f * Mathf.PI) / points;
                     float a = angle % sectorAngle;
                     if (a < 0) a += sectorAngle;
@@ -134,7 +142,6 @@ namespace DunGemCrawler
         private SpriteRenderer _iceOverlay;
         private static Sprite  _iceSprite;
 
-        // layers == 0 hides the overlay; layers > 0 shows it with opacity scaled by layers.
         public void SetFrozen(int layers)
         {
             if (layers <= 0)
@@ -192,6 +199,8 @@ namespace DunGemCrawler
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }
+
+        // ── Movement ──────────────────────────────────────────────────────────────
 
         public IEnumerator SwapTo(Vector2 target, float duration)
         {

@@ -22,6 +22,9 @@ MonoBehaviour:
   WeightDoor: 5
   WeightTreasure: 10
   WeightEnemy: 10
+  EnemyPool:
+  - {fileID: 11400000, guid: 3830c18d6f6fe4645a458059ffdcd635, type: 2}
+  - {fileID: 11400000, guid: 5820ce1b7b59042f98fe2467ec7f382d, type: 2}
   TileOverrides: []
   FrozenGems:
   - Cell: {x: 2, y: 4}
