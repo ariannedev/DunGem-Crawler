@@ -26,7 +26,7 @@ namespace DunGemCrawler
 
             tile.HasBeenRevealed = true;
 
-            if (tile.Type == TileType.Door)
+            if (tile.Type == TileType.Door || tile.Type == TileType.Goal)
                 tile.View.SetPermanentlyVisible(true);
             else
                 _host.StartCoroutine(tile.View.Flash(_flashDuration));

@@ -20,25 +20,25 @@ namespace DunGemCrawler
         {
             var moves = new List<GemFallMove>();
 
-            // Phase 1 — compact existing gems downward within each section (no spawns yet)
+            // Phase 1 — compact existing gems downward within each section
             for (int col = 0; col < data.Columns; col++)
                 CompactColumn(data, col, moves, blockedCell);
 
-            // Phase 2 — lateral fills: a gem from the row ABOVE the gap in an adjacent
-            // column slides diagonally down into the gap, mimicking gravity flowing around
-            // the player obstacle.
+            // Phase 2 — lateral fills below each obstacle
             var donorCols = new HashSet<int>();
             FillBelowObstacleLaterally(data, data.PlayerCell, moves, donorCols, blockedCell);
             if (blockedCell.HasValue)
                 FillBelowObstacleLaterally(data, blockedCell.Value, moves, donorCols, blockedCell);
+            foreach (var ec in data.ActiveEnemyCells)
+                FillBelowObstacleLaterally(data, ec, moves, donorCols, blockedCell);
+            foreach (var fc in data.FrozenCells)
+                FillBelowObstacleLaterally(data, fc, moves, donorCols, blockedCell);
 
-            // Phase 1b — re-compact donor columns: stealing a gem from the middle of a
-            // column leaves a gap there; shift all gems above it downward so the gap
-            // rises to the top row, ready for a single top spawn.
+            // Phase 1b — re-compact donor columns after lateral steals
             foreach (int col in donorCols)
                 CompactColumn(data, col, moves, blockedCell);
 
-            // Phase 3 — spawn new gems from off-screen top for remaining empty cells
+            // Phase 3 — spawn new gems from off-screen top
             for (int col = 0; col < data.Columns; col++)
                 SpawnForTopSection(data, col, moves, blockedCell);
 
@@ -80,38 +80,34 @@ namespace DunGemCrawler
                 }
                 writeRow++;
             }
-            // Empty slots at top of section (writeRow..maxRow) are left null for Phase 2/3
         }
 
         // ── Phase 2 ─────────────────────────────────────────────────────────────────
 
-        // Cells below an obstacle can't receive gems falling from above, so we slide
-        // a gem in from the left or right neighbour instead.
         private void FillBelowObstacleLaterally(BoardData data, Vector2Int obstacle,
             List<GemFallMove> moves, HashSet<int> donorCols, Vector2Int? blockedCell)
         {
-            int col = obstacle.x;
+            int col         = obstacle.x;
             int obstacleRow = obstacle.y;
 
             for (int r = obstacleRow - 1; r >= 0; r--)
             {
-                if (data.IsPlayerCell(col, r)) continue; // never fill the player's current cell
+                if (data.IsPlayerCell(col, r)) continue;
+                if (data.IsEnemyCell(col, r))  continue;
+                if (data.IsFrozenCell(col, r))  continue;
                 if (blockedCell.HasValue && blockedCell.Value.x == col
-                    && blockedCell.Value.y == r) continue; // never fill the player's destination
-                if (data.GetGem(col, r) != null) continue; // already occupied
+                    && blockedCell.Value.y == r) continue;
+                if (data.GetGem(col, r) != null) continue;
 
-                // Try left neighbour first, then right.
-                // Search upward from r+1 so the gem falls diagonally downward.
-                // We scan past r+1 in case Phase 1 already compacted that row away
-                // (e.g. a horizontal match cleared gems in both this column and the
-                // adjacent column at the same row, so the r+1 slot is now empty).
                 bool filled = false;
                 foreach (int adjCol in new[] { col - 1, col + 1 })
                 {
                     for (int donorRow = r + 1; donorRow < data.Rows; donorRow++)
                     {
                         if (!data.InBounds(adjCol, donorRow)) break;
-                        if (data.IsPlayerCell(adjCol, donorRow)) break; // don't cross the player
+                        if (data.IsPlayerCell(adjCol, donorRow)) break;
+                        if (data.IsEnemyCell(adjCol, donorRow))  break;
+                        if (data.IsFrozenCell(adjCol, donorRow)) break;
                         GemData gem = data.GetGem(adjCol, donorRow);
                         if (gem == null) continue;
 
@@ -129,25 +125,17 @@ namespace DunGemCrawler
                     if (filled) break;
                 }
 
-                // If no neighbour had a gem the cell stays empty;
-                // Phase 3 won't reach it (blocked from above), so it fills next turn
-                // when a match clears adjacent gems.
                 _ = filled;
             }
         }
 
         // ── Phase 3 ─────────────────────────────────────────────────────────────────
 
-        // Spawn new gems (off-screen above board) for every empty cell in the topmost
-        // unobstructed section of each column.
         private void SpawnForTopSection(BoardData data, int col, List<GemFallMove> moves,
             Vector2Int? blockedCell)
         {
             int topSectionMin = GetTopSectionMin(data, col, blockedCell);
 
-            // Scan bottom-to-top so the lowest empty row gets fromRow = data.Rows,
-            // the next gets data.Rows+1, etc. — all gems travel the same distance
-            // and arrive simultaneously, stacked like a column dropping into place.
             int spawnOffset = 0;
             for (int r = topSectionMin; r < data.Rows; r++)
             {
@@ -173,6 +161,12 @@ namespace DunGemCrawler
                 highestObstacle = Mathf.Max(highestObstacle, data.PlayerCell.y);
             if (blockedCell.HasValue && blockedCell.Value.x == col)
                 highestObstacle = Mathf.Max(highestObstacle, blockedCell.Value.y);
+            foreach (var ec in data.ActiveEnemyCells)
+                if (ec.x == col)
+                    highestObstacle = Mathf.Max(highestObstacle, ec.y);
+            foreach (var fc in data.FrozenCells)
+                if (fc.x == col)
+                    highestObstacle = Mathf.Max(highestObstacle, fc.y);
             return highestObstacle + 1;
         }
 
@@ -184,6 +178,12 @@ namespace DunGemCrawler
             if (blockedCell.HasValue && blockedCell.Value.x == col
                 && blockedCell.Value.y != data.PlayerCell.y)
                 obstacles.Add(blockedCell.Value.y);
+            foreach (var ec in data.ActiveEnemyCells)
+                if (ec.x == col && !obstacles.Contains(ec.y))
+                    obstacles.Add(ec.y);
+            foreach (var fc in data.FrozenCells)
+                if (fc.x == col && !obstacles.Contains(fc.y))
+                    obstacles.Add(fc.y);
             obstacles.Sort();
             return obstacles;
         }
@@ -191,28 +191,23 @@ namespace DunGemCrawler
         // ── ApplyMoves ───────────────────────────────────────────────────────────────
 
         public IEnumerator ApplyMoves(BoardData data, List<GemFallMove> moves,
-            BoardConfig config, GemPool pool, Vector2 boardOrigin, MonoBehaviour host)
+            LevelConfig config, GemPool pool, Vector2 boardOrigin, MonoBehaviour host)
         {
-            // Create gem data + views for spawns (safe colours so no instant cascade)
+            int colorCount = Mathf.Clamp(config.GemColorCount, 1, 5);
+
             foreach (var move in moves)
             {
                 if (!move.IsNewSpawn) continue;
 
-                GemColor safeColor = PickSafeSpawnColor(data, move.Col, move.ToRow,
-                    Mathf.Clamp(config.GemColorCount, 1, 5));
+                GemColor safeColor = PickSafeSpawnColor(data, move.Col, move.ToRow, config, colorCount);
                 var gemData = new GemData(safeColor, move.Col, move.ToRow);
                 data.SetGem(move.Col, move.ToRow, gemData);
 
                 Vector2 spawnPos = GridUtils.GridToWorld(
                     move.Col, move.FromRow, boardOrigin, config.CellSize);
                 pool.Get(gemData, spawnPos);
-                // View starts off-screen and MoveTo will bring it down
             }
 
-            // Animate all moves simultaneously:
-            //   • vertical falls  — view is already at (col, fromRow), animate to (col, toRow)
-            //   • lateral slides  — view is already at (fromCol, row), animate to (col, row)
-            //   • spawns          — view is already off-screen, animate to (col, toRow)
             int[] remaining = { 0 };
             foreach (var move in moves)
             {
@@ -230,9 +225,10 @@ namespace DunGemCrawler
                 yield return null;
         }
 
-        // ── Safe colour picker ───────────────────────────────────────────────────────
+        // ── Safe/weighted colour picker ──────────────────────────────────────────────
 
-        private GemColor PickSafeSpawnColor(BoardData data, int col, int row, int colorCount)
+        private GemColor PickSafeSpawnColor(BoardData data, int col, int row,
+            LevelConfig config, int colorCount)
         {
             var forbidden = new HashSet<GemColor>();
 
@@ -250,9 +246,10 @@ namespace DunGemCrawler
                 if (!forbidden.Contains(c)) available.Add(c);
             }
 
-            return available.Count > 0
-                ? available[Random.Range(0, available.Count)]
-                : (GemColor)Random.Range(0, colorCount);
+            if (available.Count == 0)
+                return (GemColor)Random.Range(0, colorCount);
+
+            return BoardInitializer.PickWeightedColor(available, config, colorCount);
         }
 
         private void ForbidIfPair(BoardData data, int c1, int r1, int c2, int r2,

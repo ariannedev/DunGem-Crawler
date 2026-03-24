@@ -53,10 +53,138 @@ namespace DunGemCrawler
             return false;
         }
 
+        // ── Special gem processing ────────────────────────────────────────────────
+        //
+        // Call this after FindMatchesFromSwap / FindAllMatches.
+        // It:
+        //   • Converts one cell to a special gem when match size >= 4 (no existing specials
+        //     in that match).
+        //   • Excludes the newly created special gem from the removal list so it stays on board.
+        //   • Records which LineClear gems should clear BOTH axes (activating match >= 4 cells).
+        //
+        // Returns: the final list of cells to remove.
+        // swapA/swapB  — pass null for cascade calls (no preferred pivot).
+        public List<Vector2Int> ProcessMatches(
+            BoardData data,
+            List<MatchResult> matches,
+            Vector2Int? swapA, Vector2Int? swapB,
+            HashSet<Vector2Int> lineClearBothCells)
+        {
+            var toRemove = new HashSet<Vector2Int>();
+
+            foreach (var match in matches)
+            {
+                var cells = match.MatchedCells;
+
+                // Separate existing specials from normal gems in this match
+                var existingSpecials = new List<Vector2Int>();
+                var normals          = new List<Vector2Int>();
+                foreach (var c in cells)
+                {
+                    var g = data.GetGem(c);
+                    if (g != null && g.Type != GemType.Normal)
+                        existingSpecials.Add(c);
+                    else
+                        normals.Add(c);
+                }
+
+                // Existing specials always activate (get removed + trigger expansion in RemovalState)
+                foreach (var c in existingSpecials)
+                    toRemove.Add(c);
+
+                // If an existing LineClear is activated by a 4+ cell match, flag "clear both"
+                if (cells.Count >= 4)
+                    foreach (var c in existingSpecials)
+                        if (data.GetGem(c)?.Type == GemType.LineClear)
+                            lineClearBothCells.Add(c);
+
+                // Create a new special only when there are no existing specials in this match
+                if (existingSpecials.Count == 0 && cells.Count >= 4)
+                {
+                    Vector2Int specialCell = PickSpecialCell(cells, swapA, swapB);
+
+                    if (cells.Count >= 5)
+                    {
+                        ConvertToColorBomb(data, specialCell);
+                    }
+                    else // exactly 4
+                    {
+                        bool horizontal = IsHorizontalMatch(cells);
+                        ConvertToLineClear(data, specialCell, horizontal);
+                    }
+
+                    // All cells EXCEPT the newly created special get removed
+                    foreach (var c in cells)
+                        if (c != specialCell) toRemove.Add(c);
+                }
+                else
+                {
+                    // Normal 3-match (or specials already handled above)
+                    foreach (var c in normals)
+                        toRemove.Add(c);
+                }
+            }
+
+            return new List<Vector2Int>(toRemove);
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────────────
+
+        private Vector2Int PickSpecialCell(List<Vector2Int> cells,
+            Vector2Int? swapA, Vector2Int? swapB)
+        {
+            // Prefer the initiating swap cells (they feel most "earned")
+            if (swapA.HasValue || swapB.HasValue)
+                foreach (var c in cells)
+                    if (c == swapA || c == swapB) return c;
+
+            // Cascade: pick the cell closest to the centre of the match
+            float avgCol = 0, avgRow = 0;
+            foreach (var c in cells) { avgCol += c.x; avgRow += c.y; }
+            avgCol /= cells.Count; avgRow /= cells.Count;
+            Vector2Int best = cells[0];
+            float bestDist = float.MaxValue;
+            foreach (var c in cells)
+            {
+                float d = (c.x - avgCol) * (c.x - avgCol) + (c.y - avgRow) * (c.y - avgRow);
+                if (d < bestDist) { bestDist = d; best = c; }
+            }
+            return best;
+        }
+
+        private bool IsHorizontalMatch(List<Vector2Int> cells)
+        {
+            // Count distinct rows vs distinct columns — whichever is fewer indicates the axis
+            int rows = 0, cols = 0;
+            var seenRows = new HashSet<int>(); var seenCols = new HashSet<int>();
+            foreach (var c in cells) { seenRows.Add(c.y); seenCols.Add(c.x); }
+            rows = seenRows.Count; cols = seenCols.Count;
+            return rows <= cols; // horizontal if mostly same row
+        }
+
+        private void ConvertToLineClear(BoardData data, Vector2Int cell, bool horizontal)
+        {
+            var gem = data.GetGem(cell);
+            if (gem == null) return;
+            gem.Type = GemType.LineClear;
+            gem.LineClearHorizontal = horizontal;
+            gem.View?.SetGemType(GemType.LineClear, horizontal);
+        }
+
+        private void ConvertToColorBomb(BoardData data, Vector2Int cell)
+        {
+            var gem = data.GetGem(cell);
+            if (gem == null) return;
+            gem.Type = GemType.ColorBomb;
+            gem.View?.SetGemType(GemType.ColorBomb);
+        }
+
+        // ── ─────────────────────────────────────────────────────────────────────
+
         private void ScanCell(BoardData data, Vector2Int cell, List<MatchResult> results)
         {
             GemData gem = data.GetGem(cell);
-            if (gem == null) return;
+            if (gem == null || gem.Modifier?.Type == GemModifierType.Frozen) return;
             GemColor color = gem.Color;
 
             // Horizontal run
@@ -81,7 +209,7 @@ namespace DunGemCrawler
                 Vector2Int next = origin + axis * i;
                 if (!data.InBounds(next)) break;
                 GemData g = data.GetGem(next);
-                if (g == null || g.Color != color) break;
+                if (g == null || g.Color != color || g.Modifier?.Type == GemModifierType.Frozen) break;
                 run.Add(next);
             }
             // Extend in negative direction
@@ -90,7 +218,7 @@ namespace DunGemCrawler
                 Vector2Int next = origin - axis * i;
                 if (!data.InBounds(next)) break;
                 GemData g = data.GetGem(next);
-                if (g == null || g.Color != color) break;
+                if (g == null || g.Color != color || g.Modifier?.Type == GemModifierType.Frozen) break;
                 run.Add(next);
             }
 

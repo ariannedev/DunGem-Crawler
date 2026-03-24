@@ -25,21 +25,25 @@ namespace DunGemCrawler
 
             Board.CascadeDepth++;
 
-            // Collect removals
-            var toRemove = new List<Vector2Int>();
-            foreach (var m in matches)
-                foreach (var c in m.MatchedCells)
-                    if (!toRemove.Contains(c)) toRemove.Add(c);
-            Board.PendingRemovals = toRemove;
+            // Collect removals, creating special gems for 4/5+ matches
+            Board.LineClearBothCells.Clear();
+            Board.PendingRemovals = Board.Detector.ProcessMatches(
+                Board.Data, matches,
+                null, null,
+                Board.LineClearBothCells);
 
-            // Check if any cascade match is adjacent to player
+            // Check if any cascade match is adjacent to player — only removed cells count
             if (!Board.HasPendingPlayerMove)
             {
-                if (Board.Detector.CheckPlayerMove(Board.Data, matches,
-                    Vector2Int.zero, out Vector2Int moveTarget))
+                Vector2Int playerCell = Board.Data.PlayerCell;
+                foreach (var cell in Board.PendingRemovals)
                 {
-                    Board.HasPendingPlayerMove = true;
-                    Board.PendingPlayerMove = moveTarget;
+                    if (GridUtils.IsAdjacent(cell, playerCell))
+                    {
+                        Board.HasPendingPlayerMove = true;
+                        Board.PendingPlayerMove = cell;
+                        break;
+                    }
                 }
             }
 
@@ -57,7 +61,7 @@ namespace DunGemCrawler
             }
             else
             {
-                FSM.Enter<IdleState>();
+                FSM.Enter<EnemyAttackState>();
             }
         }
     }

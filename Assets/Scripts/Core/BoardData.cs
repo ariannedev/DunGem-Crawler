@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DunGemCrawler
@@ -7,6 +8,18 @@ namespace DunGemCrawler
         public int Columns { get; }
         public int Rows { get; }
         public Vector2Int PlayerCell { get; set; }
+        public HashSet<Vector2Int> ActiveEnemyCells { get; } = new HashSet<Vector2Int>();
+        public HashSet<Vector2Int> FrozenCells      { get; } = new HashSet<Vector2Int>();
+
+        public bool IsEnemyCell(int col, int row) =>
+            ActiveEnemyCells.Contains(new Vector2Int(col, row));
+        public bool IsEnemyCell(Vector2Int cell) =>
+            ActiveEnemyCells.Contains(cell);
+
+        public bool IsFrozenCell(int col, int row) =>
+            FrozenCells.Contains(new Vector2Int(col, row));
+        public bool IsFrozenCell(Vector2Int cell) =>
+            FrozenCells.Contains(cell);
 
         private readonly GemData[,] _gems;
         private readonly DungeonTileData[,] _tiles;

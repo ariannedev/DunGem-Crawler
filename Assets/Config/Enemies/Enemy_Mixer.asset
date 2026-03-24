@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c8001edef0b245048a58d7944374b2a, type: 3}
+  m_Name: Enemy_Mixer
+  m_EditorClassIdentifier: Assembly-CSharp::DunGemCrawler.EnemyConfig
+  Type: 1
+  MaxHealth: 3
+  AttackDamage: 1
+  SpawnWeight: 1
+  Prefab: {fileID: 416683732289486909, guid: 6e734c6d728c84631bcef458953b06b9, type: 3}
+  MixSwapCount: 3
+  FreezeCount: 1
+  FreezeIceLayers: 1

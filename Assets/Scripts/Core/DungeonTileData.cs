@@ -1,6 +1,6 @@
 namespace DunGemCrawler
 {
-    public enum TileType { Floor, Wall, Door, Treasure, Enemy }
+    public enum TileType { Floor, Wall, Door, Treasure, Enemy, Goal }
 
     public class DungeonTileData
     {

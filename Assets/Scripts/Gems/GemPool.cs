@@ -93,6 +93,8 @@ namespace DunGemCrawler
 
         public void Return(GemView view)
         {
+            view.SetGemType(GemType.Normal); // clear special overlay
+            view.SetFrozen(0);               // clear ice overlay
             view.gameObject.SetActive(false);
             _pool.Enqueue(view);
         }

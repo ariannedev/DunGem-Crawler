@@ -15,6 +15,7 @@ namespace DunGemCrawler
         private static readonly Color ColorDoor     = new Color(0.8f, 0.6f, 0.1f);
         private static readonly Color ColorTreasure = new Color(1.0f, 0.9f, 0.0f);
         private static readonly Color ColorEnemy    = new Color(0.8f, 0.1f, 0.1f);
+        private static readonly Color ColorGoal     = new Color(0.2f, 0.9f, 0.5f);
 
         private void Awake()
         {
@@ -74,6 +75,7 @@ namespace DunGemCrawler
                 TileType.Door     => ColorDoor,
                 TileType.Treasure => ColorTreasure,
                 TileType.Enemy    => ColorEnemy,
+                TileType.Goal     => ColorGoal,
                 _                 => Color.grey
             };
             return new Color(c.r, c.g, c.b, alpha);

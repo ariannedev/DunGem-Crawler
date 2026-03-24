@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11a1b4f7498ac4791b1cfe67c551866e, type: 3}
+  m_Name: LevelProgression
+  m_EditorClassIdentifier: Assembly-CSharp::DunGemCrawler.LevelProgression
+  Levels:
+  - {fileID: 11400000, guid: 200bd0bca17884c68b4a04e244ff7b22, type: 2}
+  - {fileID: 11400000, guid: f9f1068672a5248e0b09c7bd86a752e0, type: 2}
+  DefaultConfig: {fileID: 11400000, guid: 2cc5e1f8d267949eda5d9071f1a485bd, type: 2}

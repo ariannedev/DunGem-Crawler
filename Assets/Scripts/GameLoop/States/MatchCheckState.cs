@@ -24,19 +24,25 @@ namespace DunGemCrawler
                 yield break;
             }
 
-            // Collect all cells to remove
-            var toRemove = new List<Vector2Int>();
-            foreach (var m in matches)
-                foreach (var c in m.MatchedCells)
-                    if (!toRemove.Contains(c)) toRemove.Add(c);
+            // Collect removals, creating special gems for 4/5+ matches
+            Board.LineClearBothCells.Clear();
+            Board.PendingRemovals = Board.Detector.ProcessMatches(
+                Board.Data, matches,
+                Board.PendingSwapA, Board.PendingSwapB,
+                Board.LineClearBothCells);
 
-            Board.PendingRemovals = toRemove;
-
-            // Determine player move
-            Board.HasPendingPlayerMove = Board.Detector.CheckPlayerMove(
-                Board.Data, matches, Board.PendingSwapB - Board.PendingSwapA,
-                out Vector2Int moveTarget);
-            Board.PendingPlayerMove = moveTarget;
+            // Determine player move — only check cells actually being removed
+            Board.HasPendingPlayerMove = false;
+            Vector2Int playerCell = Board.Data.PlayerCell;
+            foreach (var cell in Board.PendingRemovals)
+            {
+                if (GridUtils.IsAdjacent(cell, playerCell))
+                {
+                    Board.HasPendingPlayerMove = true;
+                    Board.PendingPlayerMove = cell;
+                    break;
+                }
+            }
 
             FSM.Enter<RemovalState>();
         }

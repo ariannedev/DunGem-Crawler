@@ -7,6 +7,7 @@ namespace DunGemCrawler
         public int Health = 10;
         public int MaxHealth = 10;
         public int Floor = 1;
+        public int Score = 0;
 
         private GUIStyle _style;
 
@@ -21,6 +22,7 @@ namespace DunGemCrawler
 
             GUI.Label(new Rect(10, 10, 250, 30), $"Floor  {Floor}", _style);
             GUI.Label(new Rect(10, 40, 250, 30), $"HP  {Health} / {MaxHealth}", _style);
+            GUI.Label(new Rect(10, 70, 250, 30), $"Score  {Score}", _style);
         }
 
         public void UpdateHealth(int current, int max)
@@ -29,9 +31,7 @@ namespace DunGemCrawler
             MaxHealth = max;
         }
 
-        public void UpdateFloor(int floor)
-        {
-            Floor = floor;
-        }
+        public void UpdateFloor(int floor) => Floor = floor;
+        public void UpdateScore(int score) => Score = score;
     }
 }
